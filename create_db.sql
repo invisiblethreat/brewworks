@@ -1,0 +1,6 @@
+CREATE TABLE brewing(
+  time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  brew CHAR(64),
+  temp REAL NOT NULL,
+  target REAL NOT NULL,
+  heater INT NOT NULL);

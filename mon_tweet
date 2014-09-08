@@ -1,0 +1,62 @@
+#!/usr/bin/python
+# -*- coding: iso-8859-15 -*-
+import time
+import sys
+import tweepy
+import Adafruit_BBIO.GPIO as GPIO
+
+offset = 0
+target = 15
+
+brew = "Brewing: Testing H20"
+
+CONSUMER_KEY = ''
+CONSUMER_SECRET = ''
+ACCESS_KEY = ''
+ACCESS_SECRET = ''
+
+# should scan bus to find this on the fly
+temp_dev="/sys/bus/w1/devices/28-000004d48974/w1_slave"
+GPIO.setup("P8_10", GPIO.OUT)
+
+print "Target temperature is %s" % target
+heater = "off"
+while True:
+  try:
+    raw = open(temp_dev, "r").read()
+    temp = float(raw.split("t=")[-1])/1000 + offset
+    date = time.strftime("%c")
+    print date + ": Temperature is " + str(temp) + "°C"
+    if temp < target:
+      if GPIO.input("P8_10"):
+        pass
+      else:
+        GPIO.output("P8_10", GPIO.HIGH)
+        heater = "on"
+        print date + ": Heater " + heater
+    else:
+      if not GPIO.input("P8_10"):
+        pass
+      else:
+        GPIO.output("P8_10", GPIO.LOW)
+        heater = "off"
+        print date + ": Heater " + heater
+    if int(time.strftime("%M")) % 47 == 0 and (time.strftime("%M") != "00"):
+      tweet = brew + "\nTemperature: " + str(temp) + "°C\nTarget: " + str(target) + "°C\nHeater Status: " + heater
+      print date + ": Tweeting: " + tweet
+      auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
+      auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
+      api = tweepy.API(auth)
+      try:
+        api.update_status(tweet)
+      except:
+        print date + ": Dupe Tweet rejected"
+        pass
+
+    time.sleep(60)
+
+  except KeyboardInterrupt:
+    GPIO.cleanup()
+    print '\nExiting!'
+    sys.exit()
+

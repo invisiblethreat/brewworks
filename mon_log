@@ -1,0 +1,48 @@
+#!/usr/bin/python
+# -*- coding: iso-8859-15 -*-
+import time
+import sys
+import Adafruit_BBIO.GPIO as GPIO
+import sqlite3
+
+offset = 0
+target = 16.0
+brew = "Water"
+
+temp_dev="/sys/bus/w1/devices/28-000004d48974/w1_slave"
+GPIO.setup("P8_10", GPIO.OUT)
+
+print "Target temperature is %s" % target
+heater = 0
+
+while True:
+  try:
+    raw = open(temp_dev, "r").read()
+    temp = float(raw.split("t=")[-1])/1000 + offset
+    date = time.strftime("%c")
+    if temp < target:
+      if GPIO.input("P8_10"):
+        pass
+      else:
+        GPIO.output("P8_10", GPIO.HIGH)
+        heater = 1
+    else:
+      if not GPIO.input("P8_10"):
+        pass
+      else:
+        GPIO.output("P8_10", GPIO.LOW)
+        heater = 0
+
+    con = sqlite3.connect('temp_tracking.db')
+    cur = con.cursor()
+    cur.execute("INSERT INTO brewing(time, brew, temp, target, heater) VALUES (datetime('now','localtime'),?,?,?,?)", (brew, temp, target, heater))
+    con.commit()
+    con.close()
+
+    time.sleep(60)
+
+  except KeyboardInterrupt:
+    GPIO.cleanup()
+    print '\nExiting!'
+    sys.exit()
+

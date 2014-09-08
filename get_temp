@@ -1,0 +1,38 @@
+#!/usr/bin/python
+import time
+import sys
+import Adafruit_BBIO.GPIO as GPIO
+
+offset = 0
+target = 14
+
+temp_dev="/sys/bus/w1/devices/28-000004d48974/w1_slave"
+GPIO.setup("P8_10", GPIO.OUT)
+
+print "Target temperature is %s" % target
+
+while True:
+  try:
+    raw = open(temp_dev, "r").read()
+    temp = float(raw.split("t=")[-1])/1000 + offset
+    date = time.strftime("%c")
+    print date + ": Temperature is " + str(temp) + " degrees"
+    if temp < target:
+      if GPIO.input("P8_10"):
+        pass
+      else:
+        GPIO.output("P8_10", GPIO.HIGH)
+        print date + ": Heater on"
+    else:
+      if not GPIO.input("P8_10"):
+        pass
+      else:
+        GPIO.output("P8_10", GPIO.LOW)
+        print date + ": Heater off"
+
+    time.sleep(60)
+
+  except KeyboardInterrupt:
+    GPIO.cleanup()
+    print '\nExiting!'
+    sys.exit()
